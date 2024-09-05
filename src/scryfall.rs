@@ -26,25 +26,23 @@ struct BulkData {
     content_encoding: String,
 }
 
-async fn get_bulk_data() -> Result<BulkDataResponse> {
+fn get_bulk_data() -> Result<BulkDataResponse> {
     let mut headers = HeaderMap::new();
     headers.insert(USER_AGENT, "MTGInventory/0.1".parse().unwrap());
     headers.insert(ACCEPT, "application/json".parse().unwrap());
 
-    let client = reqwest::Client::builder()
+    let client = reqwest::blocking::Client::builder()
         .default_headers(headers)
         .build()?;
 
     Ok(client
         .get("https://api.scryfall.com/bulk-data")
-        .send()
-        .await?
-        .json::<BulkDataResponse>()
-        .await?)
+        .send()?
+        .json::<BulkDataResponse>()?)
 }
 
-pub async fn get_all_cards_download_link() -> Result<String> {
-    let bulk_data = get_bulk_data().await?;
+pub fn get_all_cards_download_link() -> Result<String> {
+    let bulk_data = get_bulk_data()?;
     for data in bulk_data.data.iter() {
         if data.bulk_type == "all_cards" {
             return Ok(data.download_uri.clone());

@@ -1,9 +1,9 @@
 use std::time::Instant;
 
+use std::{io, fs};
+use std::io::BufRead;
 use serde::{Deserialize, Serialize};
-use tokio::fs;
 use anyhow::Result;
-use tokio::io::AsyncBufReadExt;
 use uuid::Uuid;
 use rusqlite::{Connection, params};
 
@@ -14,12 +14,12 @@ pub struct Card {
     pub name: String,
 }
 
-pub async fn convert_to_sqlite(path: &str) -> Result<()> {
+pub fn convert_to_sqlite(path: &str) -> Result<()> {
     let start = Instant::now();
 
     // Open the input file
-    let file = fs::File::open(path).await?;
-    let reader = tokio::io::BufReader::new(file);
+    let file = fs::File::open(path)?;
+    let reader = io::BufReader::new(file);
 
     let mut lines = reader.lines();
     let mut cnt = 0;
@@ -40,11 +40,13 @@ pub async fn convert_to_sqlite(path: &str) -> Result<()> {
     // Start a transaction
     let tx = conn.transaction()?;
 
-    while let Some(line) = lines.next_line().await? {
+    while let Some(Ok(line)) = lines.next() {
         let line = line.trim_end_matches(",");
+
         if line.len() == 1 {
             continue;
         }
+
         match serde_json::from_str::<Card>(&line) {
             Ok(card) => {
                 // Insert the card into the database
